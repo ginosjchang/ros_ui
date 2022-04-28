@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>491</width>
-    <height>428</height>
+    <width>1600</width>
+    <height>1600</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>AMR-Control</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QGroupBox" name="groupBox">
@@ -38,6 +38,18 @@
      <property name="text">
       <string>On</string>
      </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+     <property name="default">
+      <bool>false</bool>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
     </widget>
     <widget class="QPushButton" name="aruco_off">
      <property name="geometry">
@@ -57,7 +69,7 @@
     <property name="geometry">
      <rect>
       <x>280</x>
-      <y>90</y>
+      <y>1470</y>
       <width>111</width>
       <height>61</height>
      </rect>
@@ -66,13 +78,31 @@
      <string>back</string>
     </property>
    </widget>
+   <widget class="QWidget" name="gridLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>10</y>
+      <width>1331</width>
+      <height>1441</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+    </layout>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>491</width>
+     <width>1600</width>
      <height>22</height>
     </rect>
    </property>

@@ -17,22 +17,30 @@ import actionlib
 from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
+## Rviz
+from rviz import bindings as rviz
+
+
 class Window(QMainWindow, ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         
+        self.aruco_on.clicked.connect(self.aruco_on_clicked)
+        self.aruco_on.setEnabled(False)
+        self.aruco_off.clicked.connect(self.aruco_off_clicked)
+        self.aruco_off.setEnabled(False)
         self.backhome.clicked.connect(self.nav_goal)
 
         rospy.init_node('ui_ros')
         
-        try:
-            rospy.wait_for_service('aruco_image', 3)
-            self.aruco_mux_service = rospy.ServiceProxy('aruco_image', image)
-            self.aruco_on.clicked.connect(self.aruco_on_clicked)
-            self.aruco_off.clicked.connect(self.aruco_off_clicked)
-        except (rospy.ServiceException, rospy.ROSException) as e:
-            rospy.logerr("Service failed: %s" % (e,))
+        self.map_widget = MyViz()
+        self.gridLayout.addWidget(self.map_widget)       
+
+        # Timer
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.services_connect_check)
+        self.timer.start(5000)
 
     def aruco_on_clicked(self):
         self.aruco_mux_service(True)
@@ -77,27 +85,45 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             rospy.loginfo('Succeeded')
         else:
             rospy.loginfo('Failed')
+    
+    def services_connect_check(self):
+            try:
+                rospy.wait_for_service('aruco_image', 1)
+                self.aruco_mux_service = rospy.ServiceProxy('aruco_image', image)
+                self.aruco_on.setEnabled(True)
+                self.aruco_off.setEnabled(True)
+            except (rospy.ServiceException, rospy.ROSException) as e:
+                self.aruco_on.setEnabled(False)
+                self.aruco_off.setEnabled(False)
+
+class MyViz( QWidget ):
+    def __init__(self):
+        QWidget.__init__(self)
+        self.frame = rviz.VisualizationFrame()
+        self.frame.setSplashPath( "" )
+        self.frame.initialize()
+        reader = rviz.YamlConfigReader()
+        config = rviz.Config()
+
+        #you will need a rviz config file. This config file basically has the information about what all from the rviz you want to display on your custom UI.
+   
+        reader.readFile( config, "my_rviz_file.rviz" )
+        self.frame.load( config )
+
+        #some settings for how you want your rviz screen to look like.
+        self.setWindowTitle( config.mapGetChild( "Title" ).getValue() )
+        #self.frame.setMenuBar( None )
+        self.frame.setStatusBar( None )
+        self.frame.setHideButtonVisibility( False )
+        self.manager = self.frame.getManager()
+        self.grid_display = self.manager.getRootDisplayGroup().getDisplayAt( 0 )
+        layout = QVBoxLayout()
+        layout.addWidget( self.frame )
+        self.setLayout( layout )
 
 if __name__ == '__main__':
-    # import sys
-    # app = QtWidgets.QApplication(sys.argv)
-    # window = Window()
-    # window.show()
-    # sys.exit(app.exec_())
-
-
-    # First import the library
-    import pyrealsense2 as rs
-
-    # Create a context object. This object owns the handles to all connected realsense devices
-    pipeline = rs.pipeline()
-    pipeline.start()
-
-    try:
-        for i in range(0, 100):
-            frames = pipeline.wait_for_frames()
-            for f in frames:
-                print(f)
-
-    finally:
-        pipeline.stop()
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    window = Window()
+    window.show()
+    sys.exit(app.exec_())
