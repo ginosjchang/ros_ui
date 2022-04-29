@@ -9,13 +9,14 @@ import os
 import subprocess
 
 import rospy
-
+import rosnode
 
 ## Service import
 from aruco_ros.srv import image
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from geometry_msgs.msg import Twist
 
 ## Rviz
 from rviz import bindings as rviz
@@ -25,14 +26,17 @@ class Window(QMainWindow, ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        
-        self.aruco_on.clicked.connect(self.aruco_on_clicked)
-        self.aruco_on.setEnabled(False)
-        self.aruco_off.clicked.connect(self.aruco_off_clicked)
-        self.aruco_off.setEnabled(False)
-        self.backhome.clicked.connect(self.nav_goal)
 
         rospy.init_node('ui_ros')
+        self.twist_pub = rospy.Publisher('cmd_vel', Twist)
+
+        self.aruco_on.clicked.connect(self.aruco_on_clicked)
+        #self.aruco_on.setEnabled(False)
+        self.aruco_off.clicked.connect(self.aruco_off_clicked)
+        #self.aruco_off.setEnabled(False)
+        self.nav_start_button.clicked.connect(self.nav_goal)
+
+        
         
         self.map_widget = MyViz()
         self.gridLayout.addWidget(self.map_widget)       
@@ -40,15 +44,66 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         # Timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.services_connect_check)
-        self.timer.start(5000)
+        self.timer.start(1000)
+        
+        # arrow key
+        self.arrow_key_up_button.pressed.connect(self.arrow_key_pressed)
+        self.arrow_key_up_button.released.connect(self.arrow_key_released)
+        self.arrow_key_down_button.pressed.connect(self.arrow_key_pressed)
+        self.arrow_key_down_button.released.connect(self.arrow_key_released)
+        self.arrow_key_right_button.pressed.connect(self.arrow_key_pressed)
+        self.arrow_key_right_button.released.connect(self.arrow_key_released)
+        self.arrow_key_left_button.pressed.connect(self.arrow_key_pressed)
+        self.arrow_key_left_button.released.connect(self.arrow_key_released)
+
+        #self.speed_slider.valueChanged.connect(self.speed_slider_value_change)
+
+
+    def arrow_key_pressed(self):
+        button = self.sender()
+        move_cmd = Twist()
+        if button == self.arrow_key_up_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_up_pressed.png")))
+            move_cmd.linear.x = self.speed_slider.value() / 10.0
+        elif button == self.arrow_key_down_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_down_pressed.png")))
+            move_cmd.linear.x = -self.speed_slider.value() / 10.0
+        elif button == self.arrow_key_right_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_right_pressed.png")))
+            move_cmd.angular.z = self.speed_slider.value() / 10.0
+        elif button == self.arrow_key_left_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_left_pressed.png")))
+            move_cmd.angular.z = -self.speed_slider.value() / 10.0
+        self.twist_pub.publish(move_cmd)
+
+    def arrow_key_released(self):
+        button = self.sender()
+        move_cmd = Twist()
+        if button == self.arrow_key_up_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_up.png")))
+        elif button == self.arrow_key_down_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_down.png")))
+        elif button == self.arrow_key_right_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_right.png")))
+        elif button == self.arrow_key_left_button:
+            button.setIcon(QIcon(QPixmap("icon/arrowkey_left.png")))
+        self.twist_pub.publish(move_cmd)
 
     def aruco_on_clicked(self):
-        self.aruco_mux_service(True)
-        #os.system("rosservice call mux_aruco/select /camera/color/image_raw")
+        try:
+            rospy.wait_for_service('aruco_image', 1)
+            service = rospy.ServiceProxy('aruco_image', image)
+            service(True)
+        except:
+            pass
     
     def aruco_off_clicked(self):
-        self.aruco_mux_service(False)
-        #os.system("rosservice call mux_aruco/select /no")
+        try:
+            rospy.wait_for_service('aruco_image', 1)
+            service = rospy.ServiceProxy('aruco_image', image)
+            service(False)
+        except:
+            pass
 
     def nav_goal(self):
 
@@ -64,37 +119,74 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         # set frame
         goal.target_pose.header.frame_id = 'map'
 
-        # set position
-        goal.target_pose.pose.position.x = 0.0
-        goal.target_pose.pose.position.y = 0.0
-        # goal.target_pose.pose.position.z = 0.0
+        try:
+            # set position
+            goal.target_pose.pose.position.x = float(self.nav_x_lineEdit.text())
+            goal.target_pose.pose.position.y = float(self.nav_y_lineEdit.text())
+            # goal.target_pose.pose.position.z = 0.0
 
-        # set orientation
-        # goal.target_pose.pose.orientation.x = 0.0
-        # goal.target_pose.pose.orientation.y = 0.0
-        # goal.target_pose.pose.orientation.z = 1.0
-        goal.target_pose.pose.orientation.w = 1.0
+            # set orientation
+            # goal.target_pose.pose.orientation.x = 0.0
+            # goal.target_pose.pose.orientation.y = 0.0
+            # goal.target_pose.pose.orientation.z = 1.0
+            goal.target_pose.pose.orientation.w = float(self.nav_angle_lineEdit.text())
 
-        client.send_goal(goal)
+            client.send_goal(goal)
 
-        print('Waiting for the result')
-        #rospy.loginfo('Waiting for the result')
-        client.wait_for_result()
+            print('Waiting for the result')
+            #rospy.loginfo('Waiting for the result')
+            client.wait_for_result()
 
-        if client.get_state() == GoalStatus.SUCCEEDED:
-            rospy.loginfo('Succeeded')
-        else:
-            rospy.loginfo('Failed')
+            if client.get_state() == GoalStatus.SUCCEEDED:
+                rospy.loginfo('Succeeded')
+            else:
+                rospy.loginfo('Failed')
+        except:
+            rospy.loginfo('Exception')
     
     def services_connect_check(self):
-            try:
-                rospy.wait_for_service('aruco_image', 1)
-                self.aruco_mux_service = rospy.ServiceProxy('aruco_image', image)
-                self.aruco_on.setEnabled(True)
-                self.aruco_off.setEnabled(True)
-            except (rospy.ServiceException, rospy.ROSException) as e:
-                self.aruco_on.setEnabled(False)
-                self.aruco_off.setEnabled(False)
+        node_list = rosnode.get_node_names()
+        if '/ArUCo' in node_list :
+            #self.aruco_status_label.setText("Connect")
+            self.aruco_status_label.setStyleSheet("color: green")
+        else:
+            #self.aruco_status_label.setText("Disconnect")
+            self.aruco_status_label.setStyleSheet("color: red")
+        
+        if '/MuxArUCo' in node_list :
+            #self.muxaruco_status_label.setText("Connect")
+            self.muxaruco_status_label.setStyleSheet("color: green")
+        else:
+            #self.muxaruco_status_label.setText("Disconnect")
+            self.muxaruco_status_label.setStyleSheet("color: red")
+
+        if '/camera/realsense2_camera' in node_list:
+            #self.realsense_status_label.setText("Connect")
+            self.realsense_status_label.setStyleSheet("color: green")
+        else:
+            #self.realsense_status_label.setText("Disconnect")
+            self.realsense_status_label.setStyleSheet("color: red")
+        
+        if '/detection_publisher' in node_list:
+            #self.detect_status_label.setText("Connect")
+            self.detect_status_label.setStyleSheet("color: green")
+        else:
+            #self.detect_status_label.setText("Disconnect")
+            self.detect_status_label.setStyleSheet("color: red")
+        
+        if '/darknet_ros' in node_list:
+            #self.yolo_status_label.setText("Connect")
+            self.yolo_status_label.setStyleSheet("color: green")
+        else:
+            #self.yolo_status_label.setText("Disconnect")
+            self.yolo_status_label.setStyleSheet("color: red")
+    
+    '''
+    def speed_slider_value_change(self, value):
+        self.speed_label.setText(str(value))
+    '''
+
+        
 
 class MyViz( QWidget ):
     def __init__(self):
