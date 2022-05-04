@@ -56,7 +56,8 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         self.arrow_key_left_button.pressed.connect(self.arrow_key_pressed)
         self.arrow_key_left_button.released.connect(self.arrow_key_released)
 
-        #self.speed_slider.valueChanged.connect(self.speed_slider_value_change)
+        self.linearSpeed_slider.valueChanged.connect(self.slider_value_change)
+        self.rotationSpeed_slider.valueChanged.connect(self.slider_value_change)
 
 
     def arrow_key_pressed(self):
@@ -64,16 +65,16 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         move_cmd = Twist()
         if button == self.arrow_key_up_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_up_pressed.png")))
-            move_cmd.linear.x = self.speed_slider.value() / 10.0
+            move_cmd.linear.x = self.linearSpeed_slider.value() / 10.0
         elif button == self.arrow_key_down_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_down_pressed.png")))
-            move_cmd.linear.x = -self.speed_slider.value() / 10.0
+            move_cmd.linear.x = -self.linearSpeed_slider.value() / 10.0
         elif button == self.arrow_key_right_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_right_pressed.png")))
-            move_cmd.angular.z = self.speed_slider.value() / 10.0
+            move_cmd.angular.z = -self.rotationSpeed_slider.value() / 10.0
         elif button == self.arrow_key_left_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left_pressed.png")))
-            move_cmd.angular.z = -self.speed_slider.value() / 10.0
+            move_cmd.angular.z = self.rotationSpeed_slider.value() / 10.0
         self.twist_pub.publish(move_cmd)
 
     def arrow_key_released(self):
@@ -179,12 +180,22 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             self.yolo_status_label.setStyleSheet("color: green")
         else:
             #self.yolo_status_label.setText("Disconnect")
-            self.yolo_status_label.setStyleSheet("color: red")
+            self.yolo_status_label.setStyleSheet("color: red")       
+        
+        if '/velodyne_nodelet_manager' in node_list:
+            #self.yolo_status_label.setText("Connect")
+            self.velodyne_status_label.setStyleSheet("color: green")
+        else:
+            #self.yolo_status_label.setText("Disconnect")
+            self.velodyne_status_label.setStyleSheet("color: red")
     
-    '''
-    def speed_slider_value_change(self, value):
-        self.speed_label.setText(str(value))
-    '''
+    def slider_value_change(self, value):
+        slider = self.sender()
+        if slider == self.linearSpeed_slider:
+            self.linearSpeed_label.setNum(value)
+        elif slider == self.rotationSpeed_slider:
+            self.rotationSpeed_label.setNum(value)
+    
 
         
 
