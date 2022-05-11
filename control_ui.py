@@ -48,7 +48,7 @@ class Ui_MainWindow(object):
         self.arrow_key_up_button.setIconSize(QtCore.QSize(80, 80))
         self.arrow_key_up_button.setCheckable(False)
         self.arrow_key_up_button.setChecked(False)
-        self.arrow_key_up_button.setAutoRepeat(False)
+        self.arrow_key_up_button.setAutoRepeat(True)
         self.arrow_key_up_button.setObjectName("arrow_key_up_button")
         self.arrow_key_right_button = QtWidgets.QPushButton(self.groupBox_2)
         self.arrow_key_right_button.setEnabled(True)

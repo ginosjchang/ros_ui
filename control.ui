@@ -98,7 +98,7 @@
       <bool>false</bool>
      </property>
      <property name="autoRepeat">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
     </widget>
     <widget class="QPushButton" name="arrow_key_right_button">
