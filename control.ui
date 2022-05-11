@@ -30,60 +30,6 @@
     <normaloff>icon/test.png</normaloff>icon/test.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QGroupBox" name="groupBox">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>440</y>
-      <width>181</width>
-      <height>261</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>ArUCo_Image</string>
-    </property>
-    <widget class="QPushButton" name="aruco_on">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>50</y>
-       <width>131</width>
-       <height>61</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>On</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-     <property name="autoDefault">
-      <bool>false</bool>
-     </property>
-     <property name="default">
-      <bool>false</bool>
-     </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="aruco_off">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>170</y>
-       <width>131</width>
-       <height>61</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Off</string>
-     </property>
-    </widget>
-   </widget>
    <widget class="QWidget" name="gridLayoutWidget">
     <property name="geometry">
      <rect>
@@ -390,7 +336,7 @@
       <x>10</x>
       <y>20</y>
       <width>201</width>
-      <height>341</height>
+      <height>271</height>
      </rect>
     </property>
     <property name="title">
@@ -412,46 +358,11 @@
       <string>Realsense</string>
      </property>
     </widget>
-    <widget class="QLabel" name="aruco_status_label">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>80</y>
-       <width>151</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">color:red</string>
-     </property>
-     <property name="text">
-      <string>ArUCo</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="muxaruco_status_label">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>120</y>
-       <width>151</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">color:red</string>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="text">
-      <string>MuxArUCo</string>
-     </property>
-    </widget>
     <widget class="QLabel" name="yolo_status_label">
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>160</y>
+       <y>80</y>
        <width>151</width>
        <height>31</height>
       </rect>
@@ -467,7 +378,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>200</y>
+       <y>120</y>
        <width>151</width>
        <height>31</height>
       </rect>
@@ -483,7 +394,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>240</y>
+       <y>160</y>
        <width>151</width>
        <height>31</height>
       </rect>
@@ -499,7 +410,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>280</y>
+       <y>200</y>
        <width>151</width>
        <height>31</height>
       </rect>

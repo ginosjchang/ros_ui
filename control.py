@@ -21,6 +21,8 @@ from geometry_msgs.msg import Twist
 ## Rviz
 from rviz import bindings as rviz
 
+## Thread
+import threading
 
 class Window(QMainWindow, ui.Ui_MainWindow):
     def __init__(self):
@@ -30,14 +32,8 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         rospy.init_node('ui_ros')
         self.twist_pub = rospy.Publisher('cmd_vel', Twist)
 
-        self.aruco_on.clicked.connect(self.aruco_on_clicked)
-        #self.aruco_on.setEnabled(False)
-        self.aruco_off.clicked.connect(self.aruco_off_clicked)
-        #self.aruco_off.setEnabled(False)
-        self.nav_start_button.clicked.connect(self.nav_goal)
-
-        
-        
+        self.nav_start_button.clicked.connect(self.nav_start)
+     
         self.map_widget = MyViz()
         self.gridLayout.addWidget(self.map_widget)       
 
@@ -58,7 +54,6 @@ class Window(QMainWindow, ui.Ui_MainWindow):
 
         self.linearSpeed_slider.valueChanged.connect(self.slider_value_change)
         self.rotationSpeed_slider.valueChanged.connect(self.slider_value_change)
-
 
     def arrow_key_pressed(self):
         button = self.sender()
@@ -90,21 +85,9 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left.png")))
         self.twist_pub.publish(move_cmd)
 
-    def aruco_on_clicked(self):
-        try:
-            rospy.wait_for_service('aruco_image', 1)
-            service = rospy.ServiceProxy('aruco_image', image)
-            service(True)
-        except:
-            pass
-    
-    def aruco_off_clicked(self):
-        try:
-            rospy.wait_for_service('aruco_image', 1)
-            service = rospy.ServiceProxy('aruco_image', image)
-            service(False)
-        except:
-            pass
+    def nav_start(self):
+        t = threading.Thread(target = nav_goal)
+        t.start()
 
     def nav_goal(self):
 
@@ -147,53 +130,30 @@ class Window(QMainWindow, ui.Ui_MainWindow):
     
     def services_connect_check(self):
         node_list = rosnode.get_node_names()
-        if '/ArUCo' in node_list :
-            #self.aruco_status_label.setText("Connect")
-            self.aruco_status_label.setStyleSheet("color: green")
-        else:
-            #self.aruco_status_label.setText("Disconnect")
-            self.aruco_status_label.setStyleSheet("color: red")
-        
-        if '/MuxArUCo' in node_list :
-            #self.muxaruco_status_label.setText("Connect")
-            self.muxaruco_status_label.setStyleSheet("color: green")
-        else:
-            #self.muxaruco_status_label.setText("Disconnect")
-            self.muxaruco_status_label.setStyleSheet("color: red")
 
         if '/camera/realsense2_camera' in node_list:
-            #self.realsense_status_label.setText("Connect")
             self.realsense_status_label.setStyleSheet("color: green")
         else:
-            #self.realsense_status_label.setText("Disconnect")
             self.realsense_status_label.setStyleSheet("color: red")
         
         if '/detection_publisher' in node_list:
-            #self.detect_status_label.setText("Connect")
             self.detect_status_label.setStyleSheet("color: green")
         else:
-            #self.detect_status_label.setText("Disconnect")
             self.detect_status_label.setStyleSheet("color: red")
         
         if '/darknet_ros' in node_list:
-            #self.yolo_status_label.setText("Connect")
             self.yolo_status_label.setStyleSheet("color: green")
         else:
-            #self.yolo_status_label.setText("Disconnect")
             self.yolo_status_label.setStyleSheet("color: red")       
         
         if '/velodyne_nodelet_manager' in node_list:
-            #self.yolo_status_label.setText("Connect")
             self.velodyne_status_label.setStyleSheet("color: green")
         else:
-            #self.yolo_status_label.setText("Disconnect")
             self.velodyne_status_label.setStyleSheet("color: red")
 
         if '/rtabmap/rtabmap' in node_list:
-            #self.yolo_status_label.setText("Connect")
             self.rtab_status_label.setStyleSheet("color: green")
         else:
-            #self.yolo_status_label.setText("Disconnect")
             self.rtab_status_label.setStyleSheet("color: red")
     
     def slider_value_change(self, value):
@@ -203,9 +163,6 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         elif slider == self.rotationSpeed_slider:
             self.rotationSpeed_label.setNum(value)
     
-
-        
-
 class MyViz( QWidget ):
     def __init__(self):
         QWidget.__init__(self)
