@@ -188,6 +188,13 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         else:
             #self.yolo_status_label.setText("Disconnect")
             self.velodyne_status_label.setStyleSheet("color: red")
+
+        if '/rtabmap/rtabmap' in node_list:
+            #self.yolo_status_label.setText("Connect")
+            self.rtab_status_label.setStyleSheet("color: green")
+        else:
+            #self.yolo_status_label.setText("Disconnect")
+            self.rtab_status_label.setStyleSheet("color: red")
     
     def slider_value_change(self, value):
         slider = self.sender()
