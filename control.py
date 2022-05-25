@@ -24,6 +24,10 @@ from rviz import bindings as rviz
 ## Thread
 import threading
 
+## ARM
+import RobotControl_func
+import ros_gripper
+
 class Window(QMainWindow, ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -33,9 +37,12 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         self.twist_pub = rospy.Publisher('cmd_vel', Twist)
 
         self.nav_start_button.clicked.connect(self.nav_start)
+        self.nav_stop_button.clicked.connect(self.nav_stop)
+
+        self.yolo_onoff_button.clicked.connect(self.yolo_onoff)
      
         self.map_widget = MyViz()
-        self.gridLayout.addWidget(self.map_widget)       
+        self.gridLayout.addWidget(self.map_widget)
 
         # Timer
         self.timer = QTimer(self)
@@ -54,6 +61,20 @@ class Window(QMainWindow, ui.Ui_MainWindow):
 
         self.linearSpeed_slider.valueChanged.connect(self.slider_value_change)
         self.rotationSpeed_slider.valueChanged.connect(self.slider_value_change)
+
+        # ARM
+        self.robot = RobotControl_func.RobotControl_Func()
+        self.robotiq_gripper = ros_gripper.gripperController()
+
+        self.robotiq_gripper.move('r')
+        self.robotiq_gripper.activate()
+        self.robotiq_gripper.move('o')
+
+        self.gripper_on_button.clicked.connect(self.gripper_on)
+        self.gripper_off_button.clicked.connect(self.gripper_off)
+
+        self.arm_init_button.clicked.connect(self.arm_init)
+        self.arm_set_button.clicked.connect(self.arm_set)
 
     def arrow_key_pressed(self):
         button = self.sender()
@@ -83,9 +104,7 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             button.setIcon(QIcon(QPixmap("icon/arrowkey_right.png")))
         elif button == self.arrow_key_left_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left.png")))
-        self.twist_pub.publish(move_cmd)
-
-    
+        self.twist_pub.publish(move_cmd)   
 
     def nav_goal(self):
 
@@ -103,15 +122,15 @@ class Window(QMainWindow, ui.Ui_MainWindow):
 
         try:
             # set position
-            goal.target_pose.pose.position.x = float(self.nav_x_lineEdit.text())
-            goal.target_pose.pose.position.y = float(self.nav_y_lineEdit.text())
+            goal.target_pose.pose.position.x = 0.0
+            goal.target_pose.pose.position.y = 0.0
             # goal.target_pose.pose.position.z = 0.0
 
             # set orientation
             # goal.target_pose.pose.orientation.x = 0.0
             # goal.target_pose.pose.orientation.y = 0.0
             # goal.target_pose.pose.orientation.z = 1.0
-            goal.target_pose.pose.orientation.w = float(self.nav_angle_lineEdit.text())
+            goal.target_pose.pose.orientation.w = 1.0
 
             client.send_goal(goal)
 
@@ -129,6 +148,9 @@ class Window(QMainWindow, ui.Ui_MainWindow):
     def nav_start(self):
         t = threading.Thread(target = self.nav_goal)
         t.start()
+
+    def nav_stop(self):
+        os.system("rostopic pub /move_base/cancel actionlib_msgs/GoalID -- {}")
 
     def services_connect_check(self):
         node_list = rosnode.get_node_names()
@@ -157,7 +179,24 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             self.rtab_status_label.setStyleSheet("color: green")
         else:
             self.rtab_status_label.setStyleSheet("color: red")
-    
+
+        if '/tm_driver' in node_list:
+            self.arm_status_label.setStyleSheet("color: green")
+            pos = self.robot.get_TMPos()
+            self.arm_x_LineEdit.setText("{:.2f}".format(pos[0]))
+            self.arm_y_LineEdit.setText("{:.2f}".format(pos[1]))
+            self.arm_z_LineEdit.setText("{:.2f}".format(pos[2]))
+            self.arm_u_LineEdit.setText("{:.2f}".format(pos[3]))
+            self.arm_v_LineEdit.setText("{:.2f}".format(pos[4]))
+            self.arm_w_LineEdit.setText("{:.2f}".format(pos[5]))
+        else:
+            self.arm_status_label.setStyleSheet("color: red")
+
+        if '/robotiq2FGripper' in node_list:
+            self.gripper_status_label.setStyleSheet("color: green")
+        else:
+            self.gripper_status_label.setStyleSheet("color: red")
+
     def slider_value_change(self, value):
         slider = self.sender()
         if slider == self.linearSpeed_slider:
@@ -165,6 +204,33 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         elif slider == self.rotationSpeed_slider:
             self.rotationSpeed_label.setNum(value)
     
+    def yolo_onoff(self):
+        print("yolo_onoff")
+        print(self.robot.Tracker_on_off_client())
+
+    def gripper_on(self):
+        self.robotiq_gripper.move("o")
+    
+    def gripper_off(self):
+        self.robotiq_gripper.move("c")
+
+    def arm_init(self):
+        self.robot.set_TMPos([376.0587, -436.61, 734.17, 179.98, 0, -135])
+
+    def arm_set(self):
+        try:
+            x = float(self.arm_x_LineEdit.text()) + float(self.arm_setX_LineEdit.text())
+            y = float(self.arm_y_LineEdit.text()) + float(self.arm_setY_LineEdit.text())
+            z = float(self.arm_z_LineEdit.text()) + float(self.arm_setZ_LineEdit.text())
+            u = float(self.arm_u_LineEdit.text()) + float(self.arm_setU_LineEdit.text())
+            v = float(self.arm_v_LineEdit.text()) + float(self.arm_setV_LineEdit.text())
+            w = float(self.arm_w_LineEdit.text()) + float(self.arm_setW_LineEdit.text())
+            #print([x, y, z, u, v, w])
+            self.robot.set_TMPos([x, y, z, u, v, w])
+        except:
+            pass
+
+
 class MyViz( QWidget ):
     def __init__(self):
         QWidget.__init__(self)
