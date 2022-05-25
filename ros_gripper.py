@@ -152,6 +152,7 @@ class gripperController():
             self.command = self.genCommand(self.askForCommand(command), self.command)
             self.pub.publish(self.command)
             rospy.sleep(0.1)
+            
     def activate(self):
         """Main loop which requests new commands and publish them on the Robotiq2FGripperRobotOutput topic."""
         self.command = self.genCommand('a', self.command)

@@ -729,7 +729,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Gripper On</string>
+      <string>Gripper Open</string>
      </property>
     </widget>
     <widget class="QPushButton" name="gripper_off_button">
@@ -742,7 +742,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Gripper Off</string>
+      <string>Gripper Close</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_9">
