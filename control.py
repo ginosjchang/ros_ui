@@ -85,9 +85,7 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left.png")))
         self.twist_pub.publish(move_cmd)
 
-    def nav_start(self):
-        t = threading.Thread(target = nav_goal)
-        t.start()
+    
 
     def nav_goal(self):
 
@@ -127,7 +125,11 @@ class Window(QMainWindow, ui.Ui_MainWindow):
                 rospy.loginfo('Failed')
         except:
             rospy.loginfo('Exception')
-    
+
+    def nav_start(self):
+        t = threading.Thread(target = self.nav_goal)
+        t.start()
+
     def services_connect_check(self):
         node_list = rosnode.get_node_names()
 
