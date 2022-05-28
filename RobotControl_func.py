@@ -5,6 +5,7 @@ from __future__ import print_function
 import time
 import random
 import numpy as np
+import os
 
 import rospy
 
@@ -13,12 +14,33 @@ from tm_msgs.srv import *
 from darknet_ros_nodes.srv import *
 from darknet_ros_msgs.srv import *
 
+import math
+import threading
+
 class ArmControl_Func():
     def __init__(self):
         super().__init__()
+        self.m = np.array([
+            [math.cos(math.radians(135)), -math.sin(math.radians(135)), 0.0, 0.0, 0.0, 0.0],
+            [math.sin(math.radians(135)), math.cos(math.radians(135)), 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        ])
+        self.mv = np.array([
+            [math.cos(math.radians(-135)), -math.sin(math.radians(-135)), 0.0, 0.0, 0.0, 0.0],
+            [math.sin(math.radians(-135)), math.cos(math.radians(-135)), 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        ])
 
-    def set_TMPos(self, pos, speed = 20, line = False):
+    def set_TMPos(self, pos, speed = 20, line = False, mode = "m"):
         # transself.set_TMPos_new(pos)form to TM robot coordinate
+        t = np.array(pos)
+        if(mode == "c"): t = np.dot(self.mv, t)
         tmp = []
 
         tmp.append(pos[0] / 1000)
@@ -36,11 +58,12 @@ class ArmControl_Func():
         else:
             set_positions(SetPositionsRequest.LINE_T, tmp, speed, 0.5, 0, False)
 
-    def get_TMPos(self):
-
+    def get_TMPos(self, mode = "m"):
         data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 0.1)
 
-        current_pos = list(data.tool_pose)
+        current_pos = np.array(list(data.tool_pose))
+        if(mode == "c"): current_pos = np.dot( self.m, current_pos)
+
         current_pos[0] = current_pos[0] * 1000
         current_pos[1] = current_pos[1] * 1000
         current_pos[2] = current_pos[2] * 1000
@@ -49,22 +72,56 @@ class ArmControl_Func():
         current_pos[5] = current_pos[5] * 180 / np.pi
 
         return current_pos
-    
+
     def go_initPos(self):
-        self.set_TMPos([376.0587, -436.61, 734.17, 179.98, 0, -135])
+        try:
+            self.set_TMPos([376.0587, -436.61, 734.17, 179.98, 0, 45])
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
+
+    def stop(self):
+        try:
+            rospy.wait_for_service('tm_driver/set_event', timeout = 0.1)
+            set_event = rospy.ServiceProxy('tm_driver/set_event', SetEvent)
+            set_event(11,0,0)
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
+    
+    def pause(self):
+        try:
+            rospy.wait_for_service('tm_driver/set_event', timeout = 0.1)
+            set_event = rospy.ServiceProxy('tm_driver/set_event', SetEvent)
+            set_event(12,0,0)
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
+    
+    def resume(self):
+        try:
+            rospy.wait_for_service('tm_driver/set_event', timeout = 0.1)
+            set_event = rospy.ServiceProxy('tm_driver/set_event', SetEvent)
+            set_event(13,0,0)
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
 
     def Tracker_on_off_client(self):
         try:
             Tracker_on_off_func = rospy.ServiceProxy('darknet_ros/is_on', IsOn)
             Tracker_on_off_func2 = rospy.ServiceProxy('detection_publisher/Tracker_on_off', Tracker_on_off)
             resp2 = Tracker_on_off_func2()
-            rospy.loginfo("Tracker_on_off " + resp2)
+            resp1 = Tracker_on_off_func()
+            #rospy.loginfo("Tracker_on_off " + resp2)
         except rospy.ServiceException as e:
             rospy.logerr("Tracker_on_off_client fail")
+    
+    def yolo_pos(self):
+        try:
+            self.set_TMPos([405., -612., 396., 90.0, 0., 45.])
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
 
 
 import actionlib
-from actionlib_msgs.msg import GoalStatus
+from actionlib_msgs.msg import GoalStatus, GoalID
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Twist
 
@@ -72,6 +129,7 @@ class AmmControl_Func():
     def __init__(self):
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.twist_pub = rospy.Publisher('cmd_vel', Twist, queue_size = 0)
+        self.cancel_pub = rospy.Publisher("move_base/cancel", GoalID, queue_size = 1)
     
     def move(self, x=0, z=0):
         cmd = Twist()
@@ -80,9 +138,12 @@ class AmmControl_Func():
          
         self.twist_pub.publish(cmd)
 
-    def nav(self, x=0.0, y=0.0, w=0.1):
+    def nav(self, x=0.0, y=0.0, w=1.0):
         try:
-            self.client.wait_for_server(timeout = 1)
+            #client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+            time = rospy.Duration.from_sec(1)
+            result = self.client.wait_for_server(timeout = time)
+            if result is False: raise Exception('time out')
 
             goal = MoveBaseGoal()
             goal.target_pose.header.stamp = rospy.Time.now()
@@ -94,17 +155,31 @@ class AmmControl_Func():
             goal.target_pose.pose.position.y = y
             goal.target_pose.pose.orientation.w = w
 
-            self.client.send_goal_and_wait(goal)
+            #self.client.send_goal_and_wait(goal)
+            self.client.send_goal(goal)
+            self.client.wait_for_result()
 
             if self.client.get_state() == GoalStatus.SUCCEEDED:
                 rospy.loginfo('Navigation Succeeded')
             else:
                 rospy.loginfo('Navigation Failed')
-        except:
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.loginfo(e)
+        except Exception as e:
+            rospy.logerr(e)
+        except :
             rospy.loginfo('Navigation Exception')
     
     def nav_stop(self):
-        os.system("rostopic pub /move_base/cancel actionlib_msgs/GoalID -- {}")
+        try:
+            goal = GoalID()
+            self.cancel_pub.publish(goal)
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.loginfo(e)
+        except BaseException as e:
+            rospy.logerr(e)
+        except :
+            rospy.loginfo('Navigation Stop Exception')
 
 import roslib; roslib.load_manifest('robotiq_2f_gripper_control')
 from robotiq_2f_gripper_control.msg import _Robotiq2FGripper_robot_output  as outputMsg
@@ -219,3 +294,7 @@ class GripperController():
     
     def close(self):
         self.move("c")
+    
+    def reset(self):
+        self.move("r")
+        self.move("a")

@@ -27,6 +27,7 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         self.setupUi(self)
 
         self.nodeNum = 0
+        self.armMode = "m"
 
         rospy.init_node('ui_ros')
 
@@ -34,7 +35,7 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         self.Amm = AmmControl_Func()
         self.TMArm = ArmControl_Func()
         self.gripper = GripperController()
-        self.gripper.move("r")
+        #self.gripper.move("r")
         self.gripper.move("a")
 
         # RViz
@@ -58,12 +59,19 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         self.rotationSpeed_slider.valueChanged.connect(self.slider_value_change)
         ## Yolo
         self.yolo_onoff_button.clicked.connect(self.TMArm.Tracker_on_off_client)
+        self.yolo_pos_button.clicked.connect(self.TMArm.yolo_pos)
         ## Gripper
-        self.gripper_on_button.clicked.connect(self.gripper.open)
-        self.gripper_off_button.clicked.connect(self.gripper.close)
+        self.gripper_open_button.clicked.connect(self.gripper.open)
+        self.gripper_close_button.clicked.connect(self.gripper.close)
+        self.gripper_reset_button.clicked.connect(self.gripper.reset)
         ## TMArm
         self.arm_init_button.clicked.connect(self.TMArm.go_initPos)
         self.arm_set_button.clicked.connect(self.arm_set)
+        self.arm_m_mode_button.clicked.connect(self.arm_mode_m)
+        self.arm_c_mode_button.clicked.connect(self.arm_mode_c)
+        self.arm_stop_button.clicked.connect(self.TMArm.stop)
+        #self.arm_resume_button.clicked.connect(self.TMArm.resume)
+        #self.arm_pause_button.clicked.connect(self.TMArm.pause)
 
         # Timer
         self.connect_check_timer = QTimer(self)
@@ -121,8 +129,7 @@ class Window(QMainWindow, ui.Ui_MainWindow):
 
         num = len(node_list)
         if(self.nodeNum == num): return
-
-        self.nodeNum = num
+        else : self.nodeNum = num
 
         if '/camera/realsense2_camera' in node_list:
             self.realsense_status_label.setStyleSheet("color: green")
@@ -163,16 +170,15 @@ class Window(QMainWindow, ui.Ui_MainWindow):
     
     def arm_currentPos(self):
         try:
-            pos = self.TMArm.get_TMPos()
-            self.arm_x_LineEdit.setText("{:.2f}".format(pos[0]))
-            self.arm_y_LineEdit.setText("{:.2f}".format(pos[1]))
-            self.arm_z_LineEdit.setText("{:.2f}".format(pos[2]))
-            self.arm_u_LineEdit.setText("{:.2f}".format(pos[3]))
-            self.arm_v_LineEdit.setText("{:.2f}".format(pos[4]))
-            self.arm_w_LineEdit.setText("{:.2f}".format(pos[5]))
+            pos = self.TMArm.get_TMPos(mode=self.armMode)
+            self.arm_x_LineEdit.setText("{:.2f}".format(float(pos[0])))
+            self.arm_y_LineEdit.setText("{:.2f}".format(float(pos[1])))
+            self.arm_z_LineEdit.setText("{:.2f}".format(float(pos[2])))
+            self.arm_u_LineEdit.setText("{:.2f}".format(float(pos[3])))
+            self.arm_v_LineEdit.setText("{:.2f}".format(float(pos[4])))
+            self.arm_w_LineEdit.setText("{:.2f}".format(float(pos[5])))
         except (rospy.ROSException, rospy.ServiceException) as e:
             rospy.logerr(e)
-            arm_currentPos_timer.stop()
 
     def slider_value_change(self, value):
         slider = self.sender()
@@ -183,16 +189,21 @@ class Window(QMainWindow, ui.Ui_MainWindow):
     
     def arm_set(self):
         try:
-            pos = self.TMArm.get_TMPos()
+            pos = self.TMArm.get_TMPos(mode=self.armMode)
             pos[0] += float(self.arm_setX_LineEdit.text())
             pos[1] += float(self.arm_setY_LineEdit.text())
             pos[2] += float(self.arm_setZ_LineEdit.text())
             pos[3] += float(self.arm_setU_LineEdit.text())
             pos[4] += float(self.arm_setV_LineEdit.text())
             pos[5] += float(self.arm_setW_LineEdit.text())
-            self.TMArm.set_TMPos(pos)
+            self.TMArm.set_TMPos(pos,mode=self.armMode)
         except (rospy.ROSException, rospy.ServiceException) as e:
             rospy.logerr(e)
+    
+    def arm_mode_m(self):
+        self.armMode = "m"
+    def arm_mode_c(self):
+        self.armMode = "c"
 
 if __name__ == '__main__':
     import sys
