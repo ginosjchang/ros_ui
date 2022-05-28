@@ -26,6 +26,8 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
 
+        self.nodeNum = 0
+
         rospy.init_node('ui_ros')
 
         # Control Object
@@ -64,9 +66,12 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         self.arm_set_button.clicked.connect(self.arm_set)
 
         # Timer
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.services_connect_check)
-        self.timer.start(1500)
+        self.connect_check_timer = QTimer(self)
+        self.connect_check_timer.timeout.connect(self.services_connect_check)
+        self.connect_check_timer.start(1000)
+
+        self.arm_currentPos_timer = QTimer(self)
+        self.arm_currentPos_timer.timeout.connect(self.arm_currentPos)
 
     def arrow_key_pressed(self):
         button = self.sender()
@@ -103,7 +108,21 @@ class Window(QMainWindow, ui.Ui_MainWindow):
         t.start()
 
     def services_connect_check(self):
-        node_list = rosnode.get_node_names()
+        try:
+            node_list = rosnode.get_node_names()
+        except rosnode.ROSNodeIOException as e:
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Disconnect!")
+            dlg.setText(str(e))
+            dlg.setStandardButtons(QMessageBox.Retry)
+            dlg.setIcon(QMessageBox.Warning)
+            dlg.exec()
+            return
+
+        num = len(node_list)
+        if(self.nodeNum == num): return
+
+        self.nodeNum = num
 
         if '/camera/realsense2_camera' in node_list:
             self.realsense_status_label.setStyleSheet("color: green")
@@ -132,6 +151,18 @@ class Window(QMainWindow, ui.Ui_MainWindow):
 
         if '/tm_driver' in node_list:
             self.arm_status_label.setStyleSheet("color: green")
+            self.arm_currentPos_timer.start(1000)
+        else:
+            self.arm_status_label.setStyleSheet("color: red")
+            self.arm_currentPos_timer.stop()
+
+        if '/robotiq2FGripper' in node_list:
+            self.gripper_status_label.setStyleSheet("color: green")
+        else:
+            self.gripper_status_label.setStyleSheet("color: red")
+    
+    def arm_currentPos(self):
+        try:
             pos = self.TMArm.get_TMPos()
             self.arm_x_LineEdit.setText("{:.2f}".format(pos[0]))
             self.arm_y_LineEdit.setText("{:.2f}".format(pos[1]))
@@ -139,13 +170,9 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             self.arm_u_LineEdit.setText("{:.2f}".format(pos[3]))
             self.arm_v_LineEdit.setText("{:.2f}".format(pos[4]))
             self.arm_w_LineEdit.setText("{:.2f}".format(pos[5]))
-        else:
-            self.arm_status_label.setStyleSheet("color: red")
-
-        if '/robotiq2FGripper' in node_list:
-            self.gripper_status_label.setStyleSheet("color: green")
-        else:
-            self.gripper_status_label.setStyleSheet("color: red")
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
+            arm_currentPos_timer.stop()
 
     def slider_value_change(self, value):
         slider = self.sender()
@@ -164,8 +191,8 @@ class Window(QMainWindow, ui.Ui_MainWindow):
             pos[4] += float(self.arm_setV_LineEdit.text())
             pos[5] += float(self.arm_setW_LineEdit.text())
             self.TMArm.set_TMPos(pos)
-        except:
-            pass
+        except (rospy.ROSException, rospy.ServiceException) as e:
+            rospy.logerr(e)
 
 if __name__ == '__main__':
     import sys

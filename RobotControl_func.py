@@ -5,9 +5,6 @@ from __future__ import print_function
 import time
 import random
 import numpy as np
-from PyQt5.QtCore import QMutex, QObject, pyqtSlot, QThreadPool, QRunnable, QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication
-
 
 import rospy
 
@@ -16,66 +13,9 @@ from tm_msgs.srv import *
 from darknet_ros_nodes.srv import *
 from darknet_ros_msgs.srv import *
 
-mutex = QMutex()
-
-# Robot Arm move
-# class myMitter(QObject):
-#     done = pyqtSignal(bool)
-
-# class worker(QRunnable):
-#         def __init__(self, pos, speed, line):
-#             super(worker, self).__init__()
-
-#             self.pos = pos
-#             self.speed = speed
-#             self.line = line
-#             self.mitter = myMitter()
-
-#         @pyqtSlot()
-#         def run(self):
-#             try:
-#                 mutex.lock()
-#                 rospy.wait_for_service('tm_driver/ask_sta')
-#                 rospy.wait_for_service('tm_driver/set_event')
-#                 rospy.wait_for_service('tm_driver/set_positions')
-#                 ask_sta = rospy.ServiceProxy('tm_driver/ask_sta', AskSta)
-#                 set_event = rospy.ServiceProxy('tm_driver/set_event', SetEvent)
-#                 set_positions = rospy.ServiceProxy('tm_driver/set_positions', SetPositions)
-
-#                 if self.line == False:
-#                     set_positions(SetPositionsRequest.PTP_T, self.pos, self.speed, 1, 0, False)
-#                 else:
-#                     set_positions(SetPositionsRequest.LINE_T, self.pos, self.speed, 0.5, 0, False)
-
-#                 set_event(SetEventRequest.TAG, 1, 0)
-
-#                 while True:
-#                     rospy.sleep(0.2)
-#                     res = ask_sta('01', str(1), 1)
-#                     if res.subcmd == '01':
-#                         data = res.subdata.split(',')
-#                         if data[1] == 'true':
-#                             rospy.loginfo('point %d (Tag %s) is reached', 1, data[0])
-#                             break
-              
-#             except Exception as e: 
-#                 print(e)
-
-#             self.mitter.done.emit(True)
-
-#             mutex.unlock()
-
 class ArmControl_Func():
     def __init__(self):
         super().__init__()
-
-        self.pool = QThreadPool.globalInstance()
-        self.pool.setMaxThreadCount(1)
-        self.threadDone = True
-
-    def on_worker_done(self, threadDone):
-        print(threadDone)
-        self.threadDone = threadDone
 
     def set_TMPos(self, pos, speed = 20, line = False):
         # transself.set_TMPos_new(pos)form to TM robot coordinate
@@ -87,30 +27,26 @@ class ArmControl_Func():
         tmp.append(pos[3] * np.pi / 180)
         tmp.append(pos[4] * np.pi / 180)
         tmp.append(pos[5] * np.pi / 180)
-        try:
-            rospy.wait_for_service('tm_driver/set_event', timeout = 0.1)
-            set_positions = rospy.ServiceProxy('tm_driver/set_positions', SetPositions)
 
-            if line == False:
-                set_positions(SetPositionsRequest.PTP_T, tmp, speed, 1, 0, False)
-            else:
-                set_positions(SetPositionsRequest.LINE_T, tmp, speed, 0.5, 0, False)
-        except:
-            pass
+        rospy.wait_for_service('tm_driver/set_event', timeout = 0.1)
+        set_positions = rospy.ServiceProxy('tm_driver/set_positions', SetPositions)
+
+        if line == False:
+            set_positions(SetPositionsRequest.PTP_T, tmp, speed, 1, 0, False)
+        else:
+            set_positions(SetPositionsRequest.LINE_T, tmp, speed, 0.5, 0, False)
 
     def get_TMPos(self):
-        try:
-            data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 0.1)
 
-            current_pos = list(data.tool_pose)
-            current_pos[0] = current_pos[0] * 1000
-            current_pos[1] = current_pos[1] * 1000
-            current_pos[2] = current_pos[2] * 1000
-            current_pos[3] = current_pos[3] * 180 / np.pi
-            current_pos[4] = current_pos[4] * 180 / np.pi
-            current_pos[5] = current_pos[5] * 180 / np.pi
-        except:
-            current_pos = [0,0,0,0,0,0]
+        data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 0.1)
+
+        current_pos = list(data.tool_pose)
+        current_pos[0] = current_pos[0] * 1000
+        current_pos[1] = current_pos[1] * 1000
+        current_pos[2] = current_pos[2] * 1000
+        current_pos[3] = current_pos[3] * 180 / np.pi
+        current_pos[4] = current_pos[4] * 180 / np.pi
+        current_pos[5] = current_pos[5] * 180 / np.pi
 
         return current_pos
     
@@ -121,8 +57,10 @@ class ArmControl_Func():
         try:
             Tracker_on_off_func = rospy.ServiceProxy('darknet_ros/is_on', IsOn)
             Tracker_on_off_func2 = rospy.ServiceProxy('detection_publisher/Tracker_on_off', Tracker_on_off)
+            resp2 = Tracker_on_off_func2()
+            rospy.loginfo("Tracker_on_off " + resp2)
         except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
+            rospy.logerr("Tracker_on_off_client fail")
 
 
 import actionlib
@@ -159,11 +97,11 @@ class AmmControl_Func():
             self.client.send_goal_and_wait(goal)
 
             if self.client.get_state() == GoalStatus.SUCCEEDED:
-                rospy.loginfo('Succeeded')
+                rospy.loginfo('Navigation Succeeded')
             else:
-                rospy.loginfo('Failed')
+                rospy.loginfo('Navigation Failed')
         except:
-            rospy.loginfo('Exception')
+            rospy.loginfo('Navigation Exception')
     
     def nav_stop(self):
         os.system("rostopic pub /move_base/cancel actionlib_msgs/GoalID -- {}")
