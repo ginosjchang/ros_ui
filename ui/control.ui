@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>719</width>
+    <height>597</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Medicare</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../icon/bot.png</normaloff>../icon/bot.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_3">
+    <item row="0" column="0" colspan="3">
+     <layout class="QGridLayout" name="gridLayout" rowstretch="3">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMaximumSize</enum>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+     </layout>
+    </item>
+    <item row="2" column="1">
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="title">
+       <string/>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QPushButton" name="nav_start_button">
+         <property name="text">
+          <string>Navigation</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>../icon/marker.png</normaloff>../icon/marker.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="yolo_onoff_button">
+         <property name="text">
+          <string>Yolo On/Off</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="0" rowspan="2">
+     <widget class="QWidget" name="widget" native="true">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QPushButton" name="interrupt_button">
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">border: 0px;</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>../icon/stop-button.png</normaloff>../icon/stop-button.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>90</width>
+           <height>90</height>
+          </size>
+         </property>
+         <property name="shortcut">
+          <string/>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>719</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="tabletTracking">
+    <bool>false</bool>
+   </property>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionNode_checker"/>
+    <addaction name="actionAmm_control"/>
+    <addaction name="actionArm_control"/>
+   </widget>
+   <widget class="QMenu" name="menuGripper">
+    <property name="title">
+     <string>Gripper</string>
+    </property>
+    <addaction name="actionActive"/>
+    <addaction name="actionReset"/>
+    <addaction name="actionOpen"/>
+    <addaction name="actionClose"/>
+   </widget>
+   <widget class="QMenu" name="menuTM_Pos">
+    <property name="title">
+     <string>TM_Pos</string>
+    </property>
+    <addaction name="actionInit_Pos"/>
+    <addaction name="actionYolo_Pos"/>
+   </widget>
+   <addaction name="menuView"/>
+   <addaction name="menuGripper"/>
+   <addaction name="menuTM_Pos"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionNode_checker">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/list-check.png</normaloff>../icon/list-check.png</iconset>
+   </property>
+   <property name="text">
+    <string>Node checker</string>
+   </property>
+  </action>
+  <action name="actionAmm_control">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/car.png</normaloff>../icon/car.png</iconset>
+   </property>
+   <property name="text">
+    <string>Amm control</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/hello.png</normaloff>../icon/hello.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/letter-s.png</normaloff>../icon/letter-s.png</iconset>
+   </property>
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/refresh.png</normaloff>../icon/refresh.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset</string>
+   </property>
+  </action>
+  <action name="actionActive">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/play.png</normaloff>../icon/play.png</iconset>
+   </property>
+   <property name="text">
+    <string>Active</string>
+   </property>
+  </action>
+  <action name="actionArm_control">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/robot-arm.png</normaloff>../icon/robot-arm.png</iconset>
+   </property>
+   <property name="text">
+    <string>Arm control</string>
+   </property>
+  </action>
+  <action name="actionInit_Pos">
+   <property name="text">
+    <string>Init_Pos</string>
+   </property>
+  </action>
+  <action name="actionYolo_Pos">
+   <property name="text">
+    <string>Yolo_Pos</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

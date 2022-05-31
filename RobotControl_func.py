@@ -48,23 +48,6 @@ class ArmControl_Func(QThread):
         self.__init_pos = [376.0587, -436.61, 734.17, 179.98, 0, 45]
         self.__yolo_pos = [405., -612., 396., 90.0, 0., 45.]
 
-    def run(self):
-        while True:
-            try:
-                data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 1.0)
-                pos = np.array(list(data.tool_pose))
-                self.__mutex.lock()
-                self.__current_pos[0] = pos[0] * 1000
-                self.__current_pos[1] = pos[1] * 1000
-                self.__current_pos[2] = pos[2] * 1000
-                self.__current_pos[3] = pos[3] * 180 / np.pi
-                self.__current_pos[4] = pos[4] * 180 / np.pi
-                self.__current_pos[5] = pos[5] * 180 / np.pi
-                self.pos_signal.emit(self.__current_pos)
-                self.__mutex.unlock()
-            except:
-                pass
-
     def set_TMPos(self, pos, speed = 20, line = False):
         # transself.set_TMPos_new(pos)form to TM robot coordinate
         tmp = []
@@ -83,28 +66,8 @@ class ArmControl_Func(QThread):
             set_positions(SetPositionsRequest.PTP_T, tmp, speed, 1, 0, False)
         else:
             set_positions(SetPositionsRequest.LINE_T, tmp, speed, 0.5, 0, False)
-    
-    def set_TMPos_r(self, pos, speed = 20, line = False):
-        pos[0] /= 1000
-        pos[1] /= 1000
-        pos[2] /= 1000
-        pos[3] = math.radians(pos[3])
-        pos[4] = math.radians(pos[4])
-        pos[5] = math.radians(pos[5])
-        self.__mutex.lock()
-        pos += self.__current_pos
-        #rospy.loginfo(pos)
-        self.__mutex.unlock()
 
-        rospy.wait_for_service('tm_driver/set_event', timeout = 0.1)
-        set_positions = rospy.ServiceProxy('tm_driver/set_positions', SetPositions)
-
-        if line == False:
-            set_positions(SetPositionsRequest.PTP_T, tmp, speed, 1, 0, False)
-        else:
-            set_positions(SetPositionsRequest.LINE_T, tmp, speed, 0.5, 0, False)
-
-    def __get_TMPos(self):
+    def get_TMPos(self):
         data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 0.3)
 
         current_pos = np.array(list(data.tool_pose))
@@ -237,7 +200,7 @@ class AmmControl_Func(QThread):
             else:
                 raise Exception('Navigation Fail')
         except BaseException as e:
-            rospy.logerr(e)
+            #rospy.logerr(e)
             self.except_signal.emit(e)
     
     def nav_stop(self):
@@ -245,7 +208,7 @@ class AmmControl_Func(QThread):
             goal = GoalID()
             self.cancel_pub.publish(goal)
         except BaseException as e:
-            rospy.logerr(e)
+            #rospy.logerr(e)
             self.except_signal.emit(e)
 
 import roslib; roslib.load_manifest('robotiq_2f_gripper_control')
@@ -357,4 +320,6 @@ class GripperController():
     
     def reset(self):
         self.move("r")
+    
+    def active(self):
         self.move("a")
