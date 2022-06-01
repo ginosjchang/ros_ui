@@ -20,6 +20,10 @@ import threading
 
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
+class worker(QThread):
+    def __init__(self):
+        super().__init__()
+
 class ArmControl_Func(QThread):
     pos_signal = pyqtSignal(list)
     except_signal = pyqtSignal(BaseException)
@@ -68,7 +72,7 @@ class ArmControl_Func(QThread):
             set_positions(SetPositionsRequest.LINE_T, tmp, speed, 0.5, 0, False)
 
     def get_TMPos(self):
-        data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 0.3)
+        data = rospy.wait_for_message("/feedback_states", FeedbackState, timeout = 0.5)
 
         current_pos = np.array(list(data.tool_pose))
         current_pos[0] = current_pos[0] * 1000
@@ -128,19 +132,6 @@ class ArmControl_Func(QThread):
         except (rospy.ROSException, rospy.ServiceException) as e:
             rospy.logerr(e)
             rospy.logerr("Tracker_on_off_client fail")
-    
-    def grab_aruco_client(start=True):
-        try:
-            rospy.wait_for_service('grab_aruco', timeout=0.1)
-            grab_aruco = rospy.ServiceProxy('grab_aruco', GrabArUco)
-            resp1 = grab_aruco(start)
-            if (resp1.end):
-                print("Done!")
-            else:
-                print("Failed!")
-        except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
-
 
 import actionlib
 from actionlib_msgs.msg import GoalStatus, GoalID
@@ -148,18 +139,22 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Twist
 
 class AmmControl_Func(QThread):
-    result_signal = pyqtSignal(str)
-    except_signal = pyqtSignal(BaseException)
-
+    #result_signal = pyqtSignal(str)
+    #except_signal = pyqtSignal(BaseException)
     def __init__(self):
-        super().__init__()
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.twist_pub = rospy.Publisher('cmd_vel', Twist, queue_size = 0)
         self.cancel_pub = rospy.Publisher("move_base/cancel", GoalID, queue_size = 1)
+        self.__nav_worker = worker()
+        self.__nav_worker.run = self.__nav_thread
         self.__mutex = QMutex()
         self.__nav_goal = MoveBaseGoal()
         self.__nav_goal.target_pose.header.frame_id = 'map'
         self.set_nav_goal()
+        self.forward_worker = worker()
+        self.forward_worker.run = self.__keep_forward
+        self.backward_worker = worker()
+        self.backward_worker.run = self.__keep_backward
         
     def move(self, x=0, z=0):
         cmd = Twist()
@@ -167,6 +162,23 @@ class AmmControl_Func(QThread):
         cmd.angular.z = z
          
         self.twist_pub.publish(cmd)
+
+    def __keep_forward(self):
+        cmd = Twist()
+        cmd.linear.x = 0.2
+        cmd.linear.z = 0
+        while True:
+            self.twist_pub.publish(cmd)
+            sleep(0.1)
+    
+    def __keep_backward(self):
+        cmd = Twist()
+        cmd.linear.x = -0.2
+        cmd.linear.z = 0
+        while True:
+            self.twist_pub.publish(cmd)
+            sleep(0.1)
+
 
     def set_nav_goal(self, x=0.0, y=0.0, w=1.0):
         self.__mutex.lock()
@@ -176,8 +188,7 @@ class AmmControl_Func(QThread):
         self.__mutex.unlock()
 
     def nav(self):
-        self.run = self.__nav_thread
-        self.start()
+        self.__nav_worker.start()
 
     def __nav_thread(self):
         try:
@@ -190,18 +201,17 @@ class AmmControl_Func(QThread):
 
             self.__nav_goal.target_pose.header.stamp = rospy.Time.now()
 
-            self.client.send_goal(__nav_goal)
+            self.client.send_goal(self.__nav_goal)
             self.__mutex.unlock()
             self.client.wait_for_result()
-
             if self.client.get_state() == GoalStatus.SUCCEEDED:
-                self.result_signal.emit("Navigation Succeeded")
+                #self.result_signal.emit("Navigation Succeeded")
                 rospy.loginfo('Navigation Succeeded')
             else:
                 raise Exception('Navigation Fail')
         except BaseException as e:
-            #rospy.logerr(e)
-            self.except_signal.emit(e)
+            rospy.logerr(e)
+            #self.except_signal.emit(e)
     
     def nav_stop(self):
         try:
@@ -220,10 +230,26 @@ try:
 except NameError:
     pass
 
-class GripperController():
+class GripperController(QThread):
     def __init__(self):
+        super().__init__()
         self.pub = rospy.Publisher('Robotiq2FGripperRobotOutput', outputMsg.Robotiq2FGripper_robot_output,queue_size = 0)
         self.command = outputMsg.Robotiq2FGripper_robot_output()
+        self.item_id = 0
+        self.isput = False
+    
+    def run(self):
+        try:
+            #print("run")
+            rospy.wait_for_service('grab_aruco', timeout=0.5)
+            grab_aruco = rospy.ServiceProxy('grab_aruco', GrabArUco)
+            resp1 = grab_aruco(self.item_id, self.isput)
+            if (resp1.end):
+                print("Done!")
+            else:
+                print("Failed!")
+        except BaseException as e:
+            print("Service call failed: %s"%e)
 
     def genCommand(self, char, command):
         """Update the command according to the character entered by the user."""

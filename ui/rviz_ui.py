@@ -23,7 +23,7 @@ class MyViz( QWidget ):
             pass
 
         #some settings for how you want your rviz screen to look like.
-        self.frame.setMenuBar( None )
+        #self.frame.setMenuBar( None )
         self.frame.setStatusBar( None )
         self.frame.setHideButtonVisibility( False )
         self.manager = self.frame.getManager()

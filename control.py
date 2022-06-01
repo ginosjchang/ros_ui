@@ -24,7 +24,7 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
 
         # Control Object
         self.Amm = AmmControl_Func()
-        self.Amm.except_signal.connect(self.warning_message_show)
+        #self.Amm.except_signal.connect(self.warning_message_show)
         self.TMArm = ArmControl_Func()
         self.TMArm.except_signal.connect(self.warning_message_show)
         self.gripper = GripperController()
@@ -62,6 +62,8 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
         #self.arm_stop_button.clicked.connect(self.TMArm.stop)
         #self.arm_resume_button.clicked.connect(self.TMArm.resume)
         #self.arm_pause_button.clicked.connect(self.TMArm.pause)
+        self.grab_item_button.clicked.connect(self.grab)
+        self.put_item_button.clicked.connect(self.put)
 
     def warning_message_show(self, text):
         dlg = QMessageBox(self)
@@ -80,6 +82,22 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
         self.Amm.nav_stop()
         self.Amm.move(0,0)
         self.TMArm.stop()
+    
+    def grab(self):
+        try:
+            self.gripper.item_id = int(self.item_id_LineEdit.text())
+            self.gripper.start()
+            self.gripper.isput = False
+        except BaseException as e:
+            self.warning_message_show(e)
+    
+    def put(self):
+        try:
+            self.gripper.item_id = int(self.item_id_LineEdit.text())
+            self.gripper.isput = True
+            self.gripper.start()
+        except BaseException as e:
+            self.warning_message_show(e)
 
 class Node_Checker_Window(QWidget, node_checker_ui.Ui_NodeChecker):
     def __init__(self, parent=None):
@@ -127,6 +145,7 @@ class TM_Control_Window(QWidget, arm_control_ui.Ui_Arm_control):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.arm_pos)
         self.arm_stop_button.clicked.connect(self.TMArm.stop)
+        self.arm_set_button.clicked.connect(self.arm_set)
 
     def showEvent(self, event):
         self.timer.start(1000)
@@ -147,7 +166,7 @@ class TM_Control_Window(QWidget, arm_control_ui.Ui_Arm_control):
         except BaseException as e:
             warning_message_show(self, e)
 
-    def arm_pos(self, pos):
+    def arm_pos(self):
         try:
             pos = self.TMArm.get_TMPos()
             self.arm_x_LineEdit.setText("{:.2f}".format(float(pos[0])))
@@ -185,9 +204,18 @@ class Amm_Control_Window(QWidget, amm_control_ui.Ui_Amm_control):
         if button == self.arrow_key_up_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_up_pressed.png")))
             x = self.linearSpeed_slider.value() / 10.0
+            #print(self.Amm.forward_worker.isRunning())
+            if self.Amm.forward_worker.isRunning() :
+                self.Amm.forward_worker.terminate()
+            else:
+                self.Amm.forward_worker.start()
         elif button == self.arrow_key_down_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_down_pressed.png")))
             x = -self.linearSpeed_slider.value() / 10.0
+            if self.Amm.backward_worker.isRunning():
+                self.Amm.backward_worker.terminate()
+            else:
+                self.Amm.backward_worker.start()
         elif button == self.arrow_key_right_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_right_pressed.png")))
             z = -self.rotationSpeed_slider.value() / 10.0
@@ -206,7 +234,7 @@ class Amm_Control_Window(QWidget, amm_control_ui.Ui_Amm_control):
             button.setIcon(QIcon(QPixmap("icon/arrowkey_right.png")))
         elif button == self.arrow_key_left_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left.png")))
-        self.Amm.move()
+        #self.Amm.move()
     
     def slider_value_change(self, value):
         slider = self.sender()
