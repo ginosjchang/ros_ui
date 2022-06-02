@@ -51,6 +51,7 @@ class ArmControl_Func(QThread):
         self.__mutex = QMutex()
         self.__init_pos = [376.0587, -436.61, 734.17, 179.98, 0, 45]
         self.__yolo_pos = [405., -612., 396., 90.0, 0., 45.]
+        self.__grab_pos = [-363.24, -801.15, 679.03, 180., 0., 45.]
 
     def set_TMPos(self, pos, speed = 20, line = False):
         # transself.set_TMPos_new(pos)form to TM robot coordinate
@@ -93,6 +94,12 @@ class ArmControl_Func(QThread):
     def set_TMPos_yolo(self):
         try:
             self.set_TMPos(self.__yolo_pos)
+        except BaseException as e:
+            self.except_signal.emit(e)
+    
+    def set_TMPos_grab(self):
+        try:
+            self.set_TMPos(self.__grab_pos)
         except BaseException as e:
             self.except_signal.emit(e)
 
@@ -139,14 +146,12 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Twist
 
 class AmmControl_Func(QThread):
-    #result_signal = pyqtSignal(str)
-    #except_signal = pyqtSignal(BaseException)
     def __init__(self):
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.twist_pub = rospy.Publisher('cmd_vel', Twist, queue_size = 0)
         self.cancel_pub = rospy.Publisher("move_base/cancel", GoalID, queue_size = 1)
-        self.__nav_worker = worker()
-        self.__nav_worker.run = self.__nav_thread
+        self.nav_worker = worker()
+        self.nav_worker.run = self.__nav_thread
         self.__mutex = QMutex()
         self.__nav_goal = MoveBaseGoal()
         self.__nav_goal.target_pose.header.frame_id = 'map'
@@ -187,20 +192,15 @@ class AmmControl_Func(QThread):
         self.__nav_goal.target_pose.pose.orientation.w = w
         self.__mutex.unlock()
 
-    def nav(self):
-        self.__nav_worker.start()
-
     def __nav_thread(self):
         try:
-            self.__mutex.lock()
             time = rospy.Duration.from_sec(3)
             result = self.client.wait_for_server(timeout = time)
             if result is False: 
-                self.__mutex.unlock()
                 raise Exception('move_base time out')
 
+            self.__mutex.lock()
             self.__nav_goal.target_pose.header.stamp = rospy.Time.now()
-
             self.client.send_goal(self.__nav_goal)
             self.__mutex.unlock()
             self.client.wait_for_result()
@@ -211,7 +211,6 @@ class AmmControl_Func(QThread):
                 raise Exception('Navigation Fail')
         except BaseException as e:
             rospy.logerr(e)
-            #self.except_signal.emit(e)
     
     def nav_stop(self):
         try:

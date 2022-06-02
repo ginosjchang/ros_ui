@@ -167,10 +167,19 @@
     </property>
     <addaction name="actionInit_Pos"/>
     <addaction name="actionYolo_Pos"/>
+    <addaction name="actionGrab_Pos"/>
+   </widget>
+   <widget class="QMenu" name="menuNavigation">
+    <property name="title">
+     <string>Navigation</string>
+    </property>
+    <addaction name="actionOriginal"/>
+    <addaction name="actionNavTable"/>
    </widget>
    <addaction name="menuView"/>
    <addaction name="menuGripper"/>
    <addaction name="menuTM_Pos"/>
+   <addaction name="menuNavigation"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNode_checker">
@@ -252,6 +261,25 @@
    </property>
    <property name="text">
     <string>Yolo_Pos</string>
+   </property>
+  </action>
+  <action name="actionNavTable">
+   <property name="text">
+    <string>Table</string>
+   </property>
+  </action>
+  <action name="actionOriginal">
+   <property name="text">
+    <string>Original</string>
+   </property>
+  </action>
+  <action name="actionGrab_Pos">
+   <property name="icon">
+    <iconset>
+     <normaloff>../icon/marker.png</normaloff>../icon/marker.png</iconset>
+   </property>
+   <property name="text">
+    <string>Grab_Pos</string>
    </property>
   </action>
  </widget>

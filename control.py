@@ -47,13 +47,17 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
         ## TM_Pos
         self.actionInit_Pos.triggered.connect(self.TMArm.set_TMPos_init)
         self.actionYolo_Pos.triggered.connect(self.TMArm.set_TMPos_yolo)
+        self.actionGrab_Pos.triggered.connect(self.TMArm.set_TMPos_grab)
+        ## Navigayion
+        self.actionNavTable.triggered.connect(self.nav_table)
+        self.actionOriginal.triggered.connect(self.Amm.set_nav_goal)
 
         # RViz
         self.gridLayout.addWidget(MyViz("ui/my_rviz_file.rviz"))
 
         # Button
         ## Navigation
-        self.nav_start_button.clicked.connect(self.Amm.nav)
+        self.nav_start_button.clicked.connect(self.Amm.nav_worker.start)
         ## Yolo
         self.yolo_onoff_button.clicked.connect(self.TMArm.Tracker_on_off_client)
         ## Stop
@@ -98,6 +102,12 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
             self.gripper.start()
         except BaseException as e:
             self.warning_message_show(e)
+    
+    def nav_table(self):
+        self.Amm.set_nav_goal(12.276, -0.284, 1.0)
+    
+    def nav_zero(self):
+        self.Amm.set_nav_goal()
 
 class Node_Checker_Window(QWidget, node_checker_ui.Ui_NodeChecker):
     def __init__(self, parent=None):
