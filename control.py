@@ -13,28 +13,30 @@ from ui.rviz_ui import MyViz
 import rospy
 import rosnode
 
-from RobotControl_func import ArmControl_Func, AmmControl_Func, GripperController
+from RobotControl_func import ArmControl_Func, AmmControl_Func, GripperController, worker
 
 class Window(QMainWindow, control_ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-
-        rospy.init_node('ui_ros')
-
+        rospy.init_node('ui_ros_tt')
+        
         # Control Object
+        rospy.loginfo("Set up Control Object")
         self.Amm = AmmControl_Func()
         #self.Amm.except_signal.connect(self.warning_message_show)
         self.TMArm = ArmControl_Func()
         self.TMArm.except_signal.connect(self.warning_message_show)
         self.gripper = GripperController()
-
+                
         # SubWindow
+        rospy.loginfo("Set up SubWindows")
         self.ncwindow = Node_Checker_Window()
         self.tmwidow = TM_Control_Window(self.TMArm)
         self.ammwindow = Amm_Control_Window(self.Amm)
 
         # Action
+        rospy.loginfo("Set up Action trigger connect")
         ## Veiw
         self.actionNode_checker.triggered.connect(self.ncwindow.show)
         self.actionAmm_control.triggered.connect(self.ammwindow.show)
@@ -50,12 +52,14 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
         self.actionGrab_Pos.triggered.connect(self.TMArm.set_TMPos_grab)
         ## Navigayion
         self.actionNavTable.triggered.connect(self.nav_table)
-        self.actionOriginal.triggered.connect(self.Amm.set_nav_goal)
+        self.actionOriginal.triggered.connect(self.nav_original)
 
         # RViz
+        rospy.loginfo("Set up Rviz")
         self.gridLayout.addWidget(MyViz("ui/my_rviz_file.rviz"))
 
         # Button
+        rospy.loginfo("Connect Buttons")
         ## Navigation
         self.nav_start_button.clicked.connect(self.Amm.nav_worker.start)
         ## Yolo
@@ -106,7 +110,7 @@ class Window(QMainWindow, control_ui.Ui_MainWindow):
     def nav_table(self):
         self.Amm.set_nav_goal(12.276, -0.284, 1.0)
     
-    def nav_zero(self):
+    def nav_original(self):
         self.Amm.set_nav_goal()
 
 class Node_Checker_Window(QWidget, node_checker_ui.Ui_NodeChecker):
@@ -209,30 +213,28 @@ class Amm_Control_Window(QWidget, amm_control_ui.Ui_Amm_control):
     
     def arrow_key_pressed(self):
         button = self.sender()
-        x = 0
-        z = 0
+        x = self.linearSpeed_slider.value() / 10.0
+        z = self.rotationSpeed_slider.value() / 10.0
+        self.Amm.set_nav_speed(x)
+
         if button == self.arrow_key_up_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_up_pressed.png")))
-            x = self.linearSpeed_slider.value() / 10.0
-            #print(self.Amm.forward_worker.isRunning())
             if self.Amm.forward_worker.isRunning() :
                 self.Amm.forward_worker.terminate()
             else:
                 self.Amm.forward_worker.start()
         elif button == self.arrow_key_down_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_down_pressed.png")))
-            x = -self.linearSpeed_slider.value() / 10.0
             if self.Amm.backward_worker.isRunning():
                 self.Amm.backward_worker.terminate()
             else:
                 self.Amm.backward_worker.start()
         elif button == self.arrow_key_right_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_right_pressed.png")))
-            z = -self.rotationSpeed_slider.value() / 10.0
+            self.Amm.move(0, z)
         elif button == self.arrow_key_left_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left_pressed.png")))
-            z = self.rotationSpeed_slider.value() / 10.0
-        self.Amm.move(x,z)
+            self.Amm.move(0, -z)
     
     def arrow_key_released(self):
         button = self.sender()
@@ -244,7 +246,7 @@ class Amm_Control_Window(QWidget, amm_control_ui.Ui_Amm_control):
             button.setIcon(QIcon(QPixmap("icon/arrowkey_right.png")))
         elif button == self.arrow_key_left_button:
             button.setIcon(QIcon(QPixmap("icon/arrowkey_left.png")))
-        #self.Amm.move()
+        self.Amm.move()
     
     def slider_value_change(self, value):
         slider = self.sender()

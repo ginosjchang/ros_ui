@@ -47,7 +47,6 @@ class ArmControl_Func(QThread):
             [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
         ])
 
-        self.__current_pos = [0,0,0,0,0,0]
         self.__mutex = QMutex()
         self.__init_pos = [376.0587, -436.61, 734.17, 179.98, 0, 45]
         self.__yolo_pos = [405., -612., 396., 90.0, 0., 45.]
@@ -150,17 +149,23 @@ class AmmControl_Func(QThread):
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.twist_pub = rospy.Publisher('cmd_vel', Twist, queue_size = 0)
         self.cancel_pub = rospy.Publisher("move_base/cancel", GoalID, queue_size = 1)
-        self.nav_worker = worker()
-        self.nav_worker.run = self.__nav_thread
+        
         self.__mutex = QMutex()
+
+        ## Navigation parameter
         self.__nav_goal = MoveBaseGoal()
         self.__nav_goal.target_pose.header.frame_id = 'map'
         self.set_nav_goal()
+        self.__speed = 0.4
+
+        ## Worker Thread
+        self.nav_worker = worker()
+        self.nav_worker.run = self.__nav_thread
         self.forward_worker = worker()
         self.forward_worker.run = self.__keep_forward
         self.backward_worker = worker()
         self.backward_worker.run = self.__keep_backward
-        
+
     def move(self, x=0, z=0):
         cmd = Twist()
         cmd.linear.x = x
@@ -170,7 +175,9 @@ class AmmControl_Func(QThread):
 
     def __keep_forward(self):
         cmd = Twist()
-        cmd.linear.x = 0.2
+        self.__mutex.lock()
+        cmd.linear.x = self.__speed
+        self.__mutex.unlock()
         cmd.linear.z = 0
         while True:
             self.twist_pub.publish(cmd)
@@ -178,18 +185,20 @@ class AmmControl_Func(QThread):
     
     def __keep_backward(self):
         cmd = Twist()
-        cmd.linear.x = -0.2
+        self.__mutex.lock()
+        cmd.linear.x = -self.__speed
+        self.__mutex.unlock()
         cmd.linear.z = 0
         while True:
             self.twist_pub.publish(cmd)
             sleep(0.1)
-
 
     def set_nav_goal(self, x=0.0, y=0.0, w=1.0):
         self.__mutex.lock()
         self.__nav_goal.target_pose.pose.position.x = x
         self.__nav_goal.target_pose.pose.position.y = y
         self.__nav_goal.target_pose.pose.orientation.w = w
+        print("Set Navigation goal ", x, y, w)
         self.__mutex.unlock()
 
     def __nav_thread(self):
@@ -219,6 +228,11 @@ class AmmControl_Func(QThread):
         except BaseException as e:
             #rospy.logerr(e)
             self.except_signal.emit(e)
+    
+    def set_nav_speed(self, speed):
+        self.__mutex.lock()
+        self.__speed = speed
+        self.__mutex.unlock()
 
 import roslib; roslib.load_manifest('robotiq_2f_gripper_control')
 from robotiq_2f_gripper_control.msg import _Robotiq2FGripper_robot_output  as outputMsg
